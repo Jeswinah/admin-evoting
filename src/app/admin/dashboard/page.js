@@ -286,6 +286,21 @@ export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
   const [electionData, setElectionData] = useState(mockElectionData);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    endDate: "",
+    status: "active",
+    category: "",
+    constituency: "",
+    state: "",
+    totalVoters: "",
+    candidates: [
+      { name: "", party: "", description: "" },
+      { name: "", party: "", description: "" },
+    ],
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -305,6 +320,97 @@ export default function AdminDashboard() {
     localStorage.removeItem("adminAuthenticated");
     localStorage.removeItem("adminEmail");
     router.push("/admin/login");
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleCandidateChange = (index, field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      candidates: prev.candidates.map((candidate, i) =>
+        i === index ? { ...candidate, [field]: value } : candidate
+      ),
+    }));
+  };
+
+  const addCandidate = () => {
+    setFormData((prev) => ({
+      ...prev,
+      candidates: [
+        ...prev.candidates,
+        { name: "", party: "", description: "" },
+      ],
+    }));
+  };
+
+  const removeCandidate = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      candidates: prev.candidates.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleCreateElection = (e) => {
+    e.preventDefault();
+
+    // Generate new election with Indian election structure
+    const newElection = {
+      id: electionData.elections.length + 1,
+      title: formData.title,
+      description: formData.description,
+      endDate: formData.endDate,
+      status: formData.status,
+      category: formData.category,
+      constituency: formData.constituency,
+      state: formData.state,
+      totalVoters: parseInt(formData.totalVoters),
+      totalVotes: 0,
+      type: formData.category,
+      startDate: new Date().toISOString().split("T")[0],
+      candidates: formData.candidates
+        .filter((c) => c.name && c.party)
+        .map((candidate, index) => ({
+          id: index + 1,
+          name: candidate.name,
+          party: candidate.party,
+          description: candidate.description,
+          votes: 0,
+          percentage: 0,
+          color: ["blue", "red", "green", "purple", "yellow"][index % 5],
+        })),
+    };
+
+    // Update election data
+    setElectionData((prev) => ({
+      ...prev,
+      elections: [...prev.elections, newElection],
+      activeElections:
+        prev.activeElections + (newElection.status === "active" ? 1 : 0),
+      totalCandidates: prev.totalCandidates + newElection.candidates.length,
+    }));
+
+    // Reset form and close modal
+    setFormData({
+      title: "",
+      description: "",
+      endDate: "",
+      status: "active",
+      category: "",
+      constituency: "",
+      state: "",
+      totalVoters: "",
+      candidates: [
+        { name: "", party: "", description: "" },
+        { name: "", party: "", description: "" },
+      ],
+    });
+    setShowCreateForm(false);
   };
 
   if (!isAuthenticated) {
@@ -461,31 +567,356 @@ export default function AdminDashboard() {
           />
         </div>
 
-
         {/* Elections Overview */}
         <div>
-          <h2 className="text-2xl font-bold text-white mb-6 flex items-center">
-            <svg
-              className="h-6 w-6 mr-3"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-white flex items-center">
+              <svg
+                className="h-6 w-6 mr-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
+              </svg>
+              Elections Overview
+            </h2>
+            <button
+              onClick={() => setShowCreateForm(true)}
+              className="inline-flex items-center px-6 py-3 border border-white/20 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all duration-200 backdrop-blur-sm shadow-lg hover:shadow-xl transform hover:scale-105"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-            Elections Overview
-          </h2>
+              <svg
+                className="h-5 w-5 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              Add Election
+            </button>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {electionData.elections.map((election) => (
               <ElectionCard key={election.id} election={election} />
             ))}
           </div>
         </div>
+
+        {/* Create Election Modal */}
+        {showCreateForm && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-2xl font-bold text-white">
+                  Create New Election
+                </h3>
+                <button
+                  onClick={() => setShowCreateForm(false)}
+                  className="text-white/70 hover:text-white transition-colors"
+                >
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateElection} className="space-y-6">
+                {/* Election Basic Info */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-blue-100 mb-2">
+                      Election Title
+                    </label>
+                    <input
+                      type="text"
+                      name="title"
+                      required
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      placeholder="e.g., 2025 Lok Sabha General Election"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-blue-100 mb-2">
+                      Category
+                    </label>
+                    <select
+                      name="category"
+                      required
+                      value={formData.category}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                    >
+                      <option value="">Select Category</option>
+                      <option value="National">National</option>
+                      <option value="State">State</option>
+                      <option value="Local">Local</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-blue-100 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    required
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                    placeholder="e.g., Choose your Member of Parliament for the 18th Lok Sabha"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-blue-100 mb-2">
+                      Constituency
+                    </label>
+                    <input
+                      type="text"
+                      name="constituency"
+                      required
+                      value={formData.constituency}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      placeholder="e.g., Mumbai South"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-blue-100 mb-2">
+                      State
+                    </label>
+                    <input
+                      type="text"
+                      name="state"
+                      required
+                      value={formData.state}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      placeholder="e.g., Maharashtra"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-blue-100 mb-2">
+                      Total Voters
+                    </label>
+                    <input
+                      type="number"
+                      name="totalVoters"
+                      required
+                      value={formData.totalVoters}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                      placeholder="e.g., 1450000"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-blue-100 mb-2">
+                      End Date
+                    </label>
+                    <input
+                      type="date"
+                      name="endDate"
+                      required
+                      value={formData.endDate}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-blue-100 mb-2">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
+                    >
+                      <option value="active">Active</option>
+                      <option value="completed">Completed</option>
+                      <option value="scheduled">Scheduled</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Candidates Section */}
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h4 className="text-lg font-semibold text-white">
+                      Candidates
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={addCandidate}
+                      className="inline-flex items-center px-4 py-2 border border-white/20 rounded-lg text-sm font-medium text-white bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
+                    >
+                      <svg
+                        className="h-4 w-4 mr-2"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                        />
+                      </svg>
+                      Add Candidate
+                    </button>
+                  </div>
+
+                  <div className="space-y-4">
+                    {formData.candidates.map((candidate, index) => (
+                      <div
+                        key={index}
+                        className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10"
+                      >
+                        <div className="flex justify-between items-start mb-4">
+                          <h5 className="text-md font-medium text-blue-200">
+                            Candidate {index + 1}
+                          </h5>
+                          {formData.candidates.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => removeCandidate(index)}
+                              className="text-red-400 hover:text-red-300 transition-colors"
+                            >
+                              <svg
+                                className="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M6 18L18 6M6 6l12 12"
+                                />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-blue-200 mb-1">
+                              Name
+                            </label>
+                            <input
+                              type="text"
+                              value={candidate.name}
+                              onChange={(e) =>
+                                handleCandidateChange(
+                                  index,
+                                  "name",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm"
+                              placeholder="e.g., Arvind Kumar Sharma"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-blue-200 mb-1">
+                              Party
+                            </label>
+                            <input
+                              type="text"
+                              value={candidate.party}
+                              onChange={(e) =>
+                                handleCandidateChange(
+                                  index,
+                                  "party",
+                                  e.target.value
+                                )
+                              }
+                              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm"
+                              placeholder="e.g., Bharatiya Janata Party (BJP)"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <label className="block text-xs font-medium text-blue-200 mb-1">
+                            Description
+                          </label>
+                          <textarea
+                            value={candidate.description}
+                            onChange={(e) =>
+                              handleCandidateChange(
+                                index,
+                                "description",
+                                e.target.value
+                              )
+                            }
+                            rows={2}
+                            className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm"
+                            placeholder="e.g., Former Mumbai Mayor with 12 years of public service experience"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Form Actions */}
+                <div className="flex justify-end space-x-4 pt-6 border-t border-white/10">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateForm(false)}
+                    className="px-6 py-3 border border-white/20 rounded-xl text-sm font-medium text-white bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-6 py-3 border border-transparent rounded-xl text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                  >
+                    Create Election
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
