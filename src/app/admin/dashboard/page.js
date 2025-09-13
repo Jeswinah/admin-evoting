@@ -1,292 +1,246 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
+import { electionService, statsService } from "../../services/firebaseService";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Vote,
+  Users,
+  CheckCircle,
+  Clock,
+  Plus,
+  LogOut,
+  BarChart3,
+  Loader2,
+  X,
+  Edit,
+  RefreshCw,
+} from "lucide-react";
 
-// Mock election data - in a real app, this would come from your database
-const mockElectionData = {
-  totalVotes: 2847,
-  activeElections: 2,
-  completedElections: 5,
-  totalCandidates: 12,
-  elections: [
-    {
-      id: 1,
-      title: "2025 Presidential Election",
-      status: "active",
-      totalVotes: 1456,
-      type: "Presidential",
-      candidates: [
-        {
-          name: "Sarah Johnson",
-          party: "Democratic Party",
-          votes: 584,
-          percentage: 40.1,
-          color: "blue",
-        },
-        {
-          name: "Michael Chen",
-          party: "Republican Party",
-          votes: 467,
-          percentage: 32.1,
-          color: "red",
-        },
-        {
-          name: "Lisa Rodriguez",
-          party: "Independent",
-          votes: 291,
-          percentage: 20.0,
-          color: "green",
-        },
-        {
-          name: "David Thompson",
-          party: "Green Party",
-          votes: 114,
-          percentage: 7.8,
-          color: "emerald",
-        },
-      ],
-      startDate: "2025-09-01",
-      endDate: "2025-09-30",
-    },
-    {
-      id: 2,
-      title: "2025 Senate Election - District 5",
-      status: "active",
-      totalVotes: 892,
-      type: "Senate",
-      candidates: [
-        {
-          name: "Robert Martinez",
-          party: "Democratic Party",
-          votes: 401,
-          percentage: 45.0,
-          color: "blue",
-        },
-        {
-          name: "Jennifer Adams",
-          party: "Republican Party",
-          votes: 356,
-          percentage: 39.9,
-          color: "red",
-        },
-        {
-          name: "Thomas Wilson",
-          party: "Independent",
-          votes: 135,
-          percentage: 15.1,
-          color: "green",
-        },
-      ],
-      startDate: "2025-09-05",
-      endDate: "2025-09-25",
-    },
-    {
-      id: 3,
-      title: "2025 Governor Election",
-      status: "completed",
-      totalVotes: 499,
-      type: "Governor",
-      candidates: [
-        {
-          name: "Amanda Foster",
-          party: "Democratic Party",
-          votes: 274,
-          percentage: 54.9,
-          color: "blue",
-        },
-        {
-          name: "James Parker",
-          party: "Republican Party",
-          votes: 175,
-          percentage: 35.1,
-          color: "red",
-        },
-        {
-          name: "Maria Gonzalez",
-          party: "Independent",
-          votes: 50,
-          percentage: 10.0,
-          color: "green",
-        },
-      ],
-      startDate: "2025-08-15",
-      endDate: "2025-09-01",
-    },
-  ],
-  recentVotes: [
-    {
-      id: 1,
-      voter: "Voter ID: V12345",
-      election: "2025 Presidential Election",
-      candidate: "Sarah Johnson",
-      party: "Democratic Party",
-      timestamp: "2025-09-12 14:30",
-    },
-    {
-      id: 2,
-      voter: "Voter ID: V67890",
-      election: "2025 Senate Election - District 5",
-      candidate: "Robert Martinez",
-      party: "Democratic Party",
-      timestamp: "2025-09-12 14:25",
-    },
-    {
-      id: 3,
-      voter: "Voter ID: V54321",
-      election: "2025 Presidential Election",
-      candidate: "Michael Chen",
-      party: "Republican Party",
-      timestamp: "2025-09-12 14:20",
-    },
-    {
-      id: 4,
-      voter: "Voter ID: V98765",
-      election: "2025 Senate Election - District 5",
-      candidate: "Jennifer Adams",
-      party: "Republican Party",
-      timestamp: "2025-09-12 14:15",
-    },
-    {
-      id: 5,
-      voter: "Voter ID: V13579",
-      election: "2025 Presidential Election",
-      candidate: "Lisa Rodriguez",
-      party: "Independent",
-      timestamp: "2025-09-12 14:10",
-    },
-  ],
-};
-
-function StatCard({ title, value, subtitle, icon, color = "blue" }) {
-  const colorClasses = {
-    blue: "from-blue-500 to-blue-600",
-    green: "from-green-500 to-green-600",
-    yellow: "from-yellow-500 to-yellow-600",
-    purple: "from-purple-500 to-purple-600",
-  };
-
+function StatCard({ title, value, subtitle, icon }) {
   return (
-    <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 transform hover:scale-105 transition-all duration-200">
-      <div className="flex items-center">
-        <div
-          className={`w-12 h-12 bg-gradient-to-r ${colorClasses[color]} rounded-xl flex items-center justify-center shadow-lg`}
-        >
-          {icon}
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardContent className="p-6">
+        <div className="flex items-center">
+          <div className="p-2 bg-primary/10 rounded-lg">{icon}</div>
+          <div className="ml-4 flex-1">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="text-2xl font-bold">{value}</p>
+            {subtitle && (
+              <p className="text-xs text-muted-foreground">{subtitle}</p>
+            )}
+          </div>
         </div>
-        <div className="ml-4 flex-1">
-          <p className="text-sm font-medium text-blue-100/80">{title}</p>
-          <p className="text-2xl font-bold text-white">{value}</p>
-          {subtitle && <p className="text-xs text-blue-200/70">{subtitle}</p>}
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
-function ElectionCard({ election }) {
-  const statusConfig =
-    election.status === "active"
-      ? {
-          text: "text-green-200",
-          bg: "bg-green-500/20",
-          border: "border-green-400/30",
-        }
-      : {
-          text: "text-gray-300",
-          bg: "bg-gray-500/20",
-          border: "border-gray-400/30",
-        };
-
+function ElectionCard({ election, onRefresh }) {
   const getPartyColorClasses = (color) => {
     const colorMap = {
-      blue: "from-blue-400 to-blue-600",
-      red: "from-red-400 to-red-600",
-      green: "from-green-400 to-green-600",
-      emerald: "from-emerald-400 to-emerald-600",
-      purple: "from-purple-400 to-purple-600",
+      blue: "bg-blue-500",
+      red: "bg-red-500",
+      green: "bg-green-500",
+      emerald: "bg-emerald-500",
+      purple: "bg-purple-500",
+      orange: "bg-orange-500",
+      yellow: "bg-yellow-500",
     };
-    return colorMap[color] || "from-blue-400 to-purple-500";
+    return colorMap[color] || "bg-primary";
   };
 
   return (
-    <div className="bg-white/10 backdrop-blur-lg rounded-2xl shadow-xl border border-white/20 p-6 transform hover:scale-105 transition-all duration-200">
-      <div className="flex justify-between items-start mb-4">
-        <div className="flex-1 pr-4">
-          <h3 className="text-lg font-semibold text-white mb-1">
-            {election.title}
-          </h3>
-          <p className="text-blue-200/70 text-sm">{election.type} Election</p>
-        </div>
-        <span
-          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusConfig.text} ${statusConfig.bg} border ${statusConfig.border} backdrop-blur-sm`}
-        >
-          {election.status}
-        </span>
-      </div>
-
-      <div className="mb-6 grid grid-cols-3 gap-4 text-sm">
-        <div className="text-center">
-          <p className="text-blue-200/70">Total Votes</p>
-          <p className="text-white font-semibold">
-            {election.totalVotes.toLocaleString()}
-          </p>
-        </div>
-        <div className="text-center">
-          <p className="text-blue-200/70">Start Date</p>
-          <p className="text-white font-semibold">{election.startDate}</p>
-        </div>
-        <div className="text-center">
-          <p className="text-blue-200/70">End Date</p>
-          <p className="text-white font-semibold">{election.endDate}</p>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <h4 className="text-sm font-medium text-blue-200/80 mb-3">
-          Candidates & Results
-        </h4>
-        {election.candidates.map((candidate, index) => (
-          <div
-            key={index}
-            className="bg-white/5 rounded-xl p-3 backdrop-blur-sm"
+    <Card className="hover:shadow-lg transition-shadow">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <div className="flex-1">
+            <CardTitle className="text-lg">{election.title}</CardTitle>
+            <CardDescription>{election.category} Election</CardDescription>
+          </div>
+          <Badge
+            variant={election.status === "active" ? "default" : "secondary"}
+            className="capitalize"
           >
-            <div className="flex justify-between text-sm mb-2">
-              <div>
-                <span className="font-medium text-white block">
-                  {candidate.name}
-                </span>
-                <span className="text-blue-200/70 text-xs">
-                  {candidate.party}
-                </span>
-              </div>
-              <span className="text-blue-200/80 text-right">
-                <span className="block font-semibold">
-                  {candidate.votes.toLocaleString()} votes
-                </span>
-                <span className="text-xs">({candidate.percentage}%)</span>
+            {election.status}
+          </Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-3 gap-4 text-sm">
+          <div className="text-center">
+            <p className="text-muted-foreground">Votes Cast</p>
+            <p className="font-semibold">
+              {election.votesCast
+                ? parseInt(election.votesCast).toLocaleString()
+                : election.totalVotes?.toLocaleString() || 0}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-muted-foreground">Total Voters</p>
+            <p className="font-semibold">
+              {election.totalVoters
+                ? parseInt(election.totalVoters).toLocaleString()
+                : "N/A"}
+            </p>
+          </div>
+          <div className="text-center">
+            <p className="text-muted-foreground">End Date</p>
+            <p className="font-semibold">{election.endDate}</p>
+          </div>
+        </div>
+
+        {/* Voter Turnout Bar */}
+        {election.votesCast && election.totalVoters && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Voter Turnout</span>
+              <span className="font-semibold">
+                {(
+                  (parseInt(election.votesCast) /
+                    parseInt(election.totalVoters)) *
+                  100
+                ).toFixed(1)}
+                %
               </span>
             </div>
-            <div className="w-full bg-white/10 rounded-full h-2 backdrop-blur-sm">
+            <div className="w-full bg-muted rounded-full h-2">
               <div
-                className={`bg-gradient-to-r ${getPartyColorClasses(
-                  candidate.color
-                )} h-2 rounded-full transition-all duration-300`}
-                style={{ width: `${candidate.percentage}%` }}
+                className="bg-primary h-2 rounded-full transition-all duration-300"
+                style={{
+                  width: `${
+                    (parseInt(election.votesCast) /
+                      parseInt(election.totalVoters)) *
+                    100
+                  }%`,
+                }}
               ></div>
             </div>
           </div>
-        ))}
-      </div>
-    </div>
+        )}
+
+        <div className="space-y-3">
+          <h4 className="text-sm font-medium">Candidates</h4>
+          {election.candidates?.map((candidate, index) => (
+            <div
+              key={candidate.id || index}
+              className="space-y-2 p-3 bg-muted/50 rounded-lg"
+            >
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <span className="font-medium block text-base">
+                    {candidate.name}
+                  </span>
+                  <span className="text-primary text-sm font-medium">
+                    {candidate.party}
+                  </span>
+                  {candidate.description && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {candidate.description}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  {candidate.votes && (
+                    <>
+                      <span className="block font-semibold">
+                        {candidate.votes?.toLocaleString() || 0} votes
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        ({candidate.percentage || 0}%)
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+              {candidate.votes && candidate.percentage && (
+                <div className="w-full bg-background rounded-full h-2">
+                  <div
+                    className={`${getPartyColorClasses(
+                      candidate.color ||
+                        ["blue", "red", "green", "purple", "orange"][index % 5]
+                    )} h-2 rounded-full transition-all duration-300`}
+                    style={{ width: `${candidate.percentage || 0}%` }}
+                  ></div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <div className="text-xs text-muted-foreground border-t pt-2 space-y-1">
+          <p>
+            <strong>Election ID:</strong> {election.id}
+          </p>
+          <p>
+            <strong>Constituency:</strong>{" "}
+            {election.constituency || election.Constituency}
+          </p>
+          <p>
+            <strong>State:</strong> {election.state}
+          </p>
+          <p>
+            <strong>Category:</strong> {election.category}
+          </p>
+          <div className="text-xs text-muted-foreground">
+            <strong>Status:</strong>{" "}
+            <Badge variant="outline" className="text-xs">
+              {election.status}
+            </Badge>
+          </div>
+          {election.votesCast && election.totalVoters && (
+            <p>
+              <strong>Turnout:</strong> {election.votesCast} /{" "}
+              {election.totalVoters} voters
+            </p>
+          )}
+          {election.description && (
+            <p className="mt-2 italic">"{election.description}"</p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
 export default function AdminDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
-  const [electionData, setElectionData] = useState(mockElectionData);
+  const [firebaseConnected, setFirebaseConnected] = useState(false);
+  const [showRawData, setShowRawData] = useState(false);
+  const [lastDataLoad, setLastDataLoad] = useState(null);
+  const [electionData, setElectionData] = useState({
+    totalVotes: 0,
+    activeElections: 0,
+    completedElections: 0,
+    totalCandidates: 0,
+    elections: [],
+    recentVotes: [],
+  });
+  const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -302,24 +256,88 @@ export default function AdminDashboard() {
     ],
   });
   const router = useRouter();
+  const { currentUser, logout } = useAuth();
+
+  const loadDashboardData = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log("Loading dashboard data from Firebase...");
+
+      // Test Firebase connection
+      setFirebaseConnected(false);
+
+      // Load dashboard statistics from Firebase (without initializing sample data)
+      const stats = await statsService.getDashboardStats();
+      console.log("Raw Firebase data:", stats);
+
+      // If we got here, Firebase is connected
+      setFirebaseConnected(true);
+
+      // Filter out duplicate elections by ID to prevent card duplication
+      const uniqueElections = stats.elections.filter(
+        (election, index, arr) =>
+          index === arr.findIndex((e) => e.id === election.id)
+      );
+
+      // Update stats with unique elections
+      const cleanedStats = {
+        ...stats,
+        elections: uniqueElections,
+      };
+
+      console.log(
+        "Loaded elections:",
+        uniqueElections.length,
+        "unique elections"
+      );
+      console.log("Elections data:", uniqueElections);
+      setElectionData(cleanedStats);
+      setLastDataLoad(new Date());
+    } catch (error) {
+      console.error("Error loading dashboard data from Firebase:", error);
+      setFirebaseConnected(false);
+      // Show user-friendly error message
+      alert(
+        "Failed to load data from Firebase. Please check your connection and try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     // Check authentication
-    const authenticated = localStorage.getItem("adminAuthenticated");
-    const email = localStorage.getItem("adminEmail");
-
-    if (authenticated === "true" && email) {
+    if (currentUser) {
       setIsAuthenticated(true);
-      setAdminEmail(email);
+      setAdminEmail(currentUser.email);
+      loadDashboardData();
     } else {
-      router.push("/admin/login");
-    }
-  }, [router]);
+      // Check localStorage for backward compatibility
+      const authenticated = localStorage.getItem("adminAuthenticated");
+      const email = localStorage.getItem("adminEmail");
 
-  const handleLogout = () => {
-    localStorage.removeItem("adminAuthenticated");
-    localStorage.removeItem("adminEmail");
-    router.push("/admin/login");
+      if (authenticated === "true" && email) {
+        setIsAuthenticated(true);
+        setAdminEmail(email);
+        loadDashboardData();
+      } else {
+        router.push("/admin/login");
+      }
+    }
+  }, [currentUser, router, loadDashboardData]);
+
+  const handleLogout = async () => {
+    try {
+      if (currentUser) {
+        await logout();
+      }
+      // Clear localStorage for backward compatibility
+      localStorage.removeItem("adminAuthenticated");
+      localStorage.removeItem("adminEmail");
+      router.push("/admin/login");
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -356,124 +374,122 @@ export default function AdminDashboard() {
     }));
   };
 
-  const handleCreateElection = (e) => {
+  const handleCreateElection = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
 
-    // Generate new election with Indian election structure
-    const newElection = {
-      id: electionData.elections.length + 1,
-      title: formData.title,
-      description: formData.description,
-      endDate: formData.endDate,
-      status: formData.status,
-      category: formData.category,
-      constituency: formData.constituency,
-      state: formData.state,
-      totalVoters: parseInt(formData.totalVoters),
-      totalVotes: 0,
-      type: formData.category,
-      startDate: new Date().toISOString().split("T")[0],
-      candidates: formData.candidates
-        .filter((c) => c.name && c.party)
-        .map((candidate, index) => ({
-          id: index + 1,
-          name: candidate.name,
-          party: candidate.party,
-          description: candidate.description,
-          votes: 0,
-          percentage: 0,
-          color: ["blue", "red", "green", "purple", "yellow"][index % 5],
-        })),
-    };
+    try {
+      console.log("Creating new election in Firebase...");
 
-    // Update election data
-    setElectionData((prev) => ({
-      ...prev,
-      elections: [...prev.elections, newElection],
-      activeElections:
-        prev.activeElections + (newElection.status === "active" ? 1 : 0),
-      totalCandidates: prev.totalCandidates + newElection.candidates.length,
-    }));
+      // Prepare election data for Firebase
+      const newElectionData = {
+        title: formData.title,
+        description: formData.description,
+        endDate: formData.endDate,
+        status: formData.status,
+        category: formData.category,
+        constituency: formData.constituency,
+        state: formData.state,
+        totalVoters: parseInt(formData.totalVoters),
+        startDate: new Date().toISOString().split("T")[0],
+        candidates: formData.candidates
+          .filter((c) => c.name && c.party)
+          .map((candidate, index) => ({
+            id: index + 1,
+            name: candidate.name,
+            party: candidate.party,
+            description: candidate.description,
+            votes: 0,
+            percentage: 0,
+            color: ["blue", "red", "green", "purple", "yellow"][index % 5],
+          })),
+      };
 
-    // Reset form and close modal
-    setFormData({
-      title: "",
-      description: "",
-      endDate: "",
-      status: "active",
-      category: "",
-      constituency: "",
-      state: "",
-      totalVoters: "",
-      candidates: [
-        { name: "", party: "", description: "" },
-        { name: "", party: "", description: "" },
-      ],
-    });
-    setShowCreateForm(false);
+      console.log("Election data to save:", newElectionData);
+
+      // Create election in Firebase
+      const electionId = await electionService.createElection(newElectionData);
+      console.log("Election created successfully with ID:", electionId);
+
+      // Show success message
+      alert("Election created successfully!");
+
+      // Reload dashboard data to show the new election
+      await loadDashboardData();
+
+      // Reset form and close modal
+      setFormData({
+        title: "",
+        description: "",
+        endDate: "",
+        status: "active",
+        category: "",
+        constituency: "",
+        state: "",
+        totalVoters: "",
+        candidates: [
+          { name: "", party: "", description: "" },
+          { name: "", party: "", description: "" },
+        ],
+      });
+      setShowCreateForm(false);
+    } catch (error) {
+      console.error("Error creating election in Firebase:", error);
+      alert(
+        "Error creating election. Please check your Firebase connection and try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-          <p className="text-white text-lg">Loading dashboard...</p>
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">
+            {loading ? "Loading dashboard..." : "Checking authentication..."}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-purple-900 to-indigo-900">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-black/20 backdrop-blur-lg border-b border-white/10">
+      <div className="border-b bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div className="flex items-center space-x-4">
-              <div className="h-12 w-12 flex items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg">
-                <svg
-                  className="h-7 w-7 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+              <div className="h-12 w-12 flex items-center justify-center rounded-lg bg-primary">
+                <Vote className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
-                  Election Admin Dashboard
-                </h1>
-                <p className="text-blue-200/70 text-sm">
-                  Welcome back, {adminEmail}
-                </p>
+                <h1 className="text-3xl font-bold">Election Admin Dashboard</h1>
+                <div className="flex items-center gap-4">
+                  <p className="text-muted-foreground text-sm">
+                    Welcome back, {adminEmail}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={`w-2 h-2 rounded-full ${
+                        firebaseConnected ? "bg-green-500" : "bg-red-500"
+                      }`}
+                    ></div>
+                    <span className="text-xs text-muted-foreground">
+                      Firebase{" "}
+                      {firebaseConnected ? "Connected" : "Disconnected"}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="inline-flex items-center px-6 py-3 border border-white/20 rounded-xl text-sm font-medium text-white bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200 backdrop-blur-sm"
-            >
-              <svg
-                className="h-4 w-4 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                />
-              </svg>
+            <Button onClick={handleLogout} variant="outline">
+              <LogOut className="h-4 w-4 mr-2" />
               Logout
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -485,438 +501,627 @@ export default function AdminDashboard() {
             title="Total Votes"
             value={electionData.totalVotes.toLocaleString()}
             subtitle="All elections"
-            color="blue"
-            icon={
-              <svg
-                className="h-6 w-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
+            icon={<Vote className="h-5 w-5 text-primary" />}
           />
           <StatCard
             title="Active Elections"
             value={electionData.activeElections}
             subtitle="Currently running"
-            color="green"
-            icon={
-              <svg
-                className="h-6 w-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M13 10V3L4 14h7v7l9-11h-7z"
-                />
-              </svg>
-            }
+            icon={<Clock className="h-5 w-5 text-primary" />}
           />
           <StatCard
             title="Completed Elections"
             value={electionData.completedElections}
             subtitle="Finished"
-            color="yellow"
-            icon={
-              <svg
-                className="h-6 w-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            }
+            icon={<CheckCircle className="h-5 w-5 text-primary" />}
           />
           <StatCard
             title="Total Candidates"
             value={electionData.totalCandidates}
             subtitle="All elections"
-            color="purple"
-            icon={
-              <svg
-                className="h-6 w-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-            }
+            icon={<Users className="h-5 w-5 text-primary" />}
           />
+        </div>
+
+        {/* Database Data Overview */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold mb-6 flex items-center">
+            <BarChart3 className="h-6 w-6 mr-3" />
+            Database Overview
+          </h2>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Recent Activity */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Clock className="h-5 w-5 mr-2" />
+                  Constituency Overview
+                </CardTitle>
+                <CardDescription>
+                  Elections by state and constituency
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {electionData.elections && electionData.elections.length > 0 ? (
+                  <div className="space-y-3">
+                    {electionData.elections.map((election, index) => (
+                      <div
+                        key={election.id || index}
+                        className="flex justify-between items-center p-3 bg-muted rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium text-sm">
+                            {election.constituency || election.Constituency}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {election.state}, {election.category}
+                          </p>
+                          <p className="text-xs text-primary">
+                            {election.candidates?.length || 0} candidates
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <Badge
+                            variant={
+                              election.status?.toLowerCase() === "active"
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {election.status}
+                          </Badge>
+                          {election.votesCast && election.totalVoters && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {(
+                                (parseInt(election.votesCast) /
+                                  parseInt(election.totalVoters)) *
+                                100
+                              ).toFixed(1)}
+                              % turnout
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">
+                    No constituency data found
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Database Statistics */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <BarChart3 className="h-5 w-5 mr-2" />
+                  Election Statistics
+                </CardTitle>
+                <CardDescription>
+                  Live data from Firebase Firestore
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Total Elections</span>
+                    <Badge variant="secondary">
+                      {electionData.elections.length}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                      Active Elections
+                    </span>
+                    <Badge variant="default">
+                      {
+                        electionData.elections.filter(
+                          (e) => e.status?.toLowerCase() === "active"
+                        ).length
+                      }
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                      Total Constituencies
+                    </span>
+                    <Badge variant="outline">
+                      {
+                        new Set(
+                          electionData.elections.map(
+                            (e) => e.constituency || e.Constituency
+                          )
+                        ).size
+                      }
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                      Total Candidates
+                    </span>
+                    <Badge variant="secondary">
+                      {electionData.elections.reduce(
+                        (sum, e) => sum + (e.candidates?.length || 0),
+                        0
+                      )}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">
+                      Total Registered Voters
+                    </span>
+                    <Badge variant="secondary">
+                      {electionData.elections
+                        .reduce(
+                          (sum, e) =>
+                            sum + (e.totalVoters ? parseInt(e.totalVoters) : 0),
+                          0
+                        )
+                        .toLocaleString()}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Votes Cast</span>
+                    <Badge variant="default">
+                      {electionData.elections
+                        .reduce(
+                          (sum, e) =>
+                            sum + (e.votesCast ? parseInt(e.votesCast) : 0),
+                          0
+                        )
+                        .toLocaleString()}
+                    </Badge>
+                  </div>
+                  <div className="border-t pt-3 mt-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-medium">
+                        Firebase Status
+                      </span>
+                      <Badge
+                        variant={firebaseConnected ? "default" : "destructive"}
+                      >
+                        {firebaseConnected ? "Connected" : "Disconnected"}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-sm font-medium">Last Updated</span>
+                      <span className="text-xs text-muted-foreground">
+                        {lastDataLoad
+                          ? lastDataLoad.toLocaleTimeString()
+                          : "Not loaded"}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full mt-3"
+                      onClick={() => setShowRawData(!showRawData)}
+                    >
+                      {showRawData ? "Hide" : "Show"} Raw Data
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Raw Data Viewer */}
+          {showRawData && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Edit className="h-5 w-5 mr-2" />
+                  Raw Database Data (JSON)
+                </CardTitle>
+                <CardDescription>
+                  Direct view of Firebase Firestore data for debugging
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium mb-2">Election Data:</h4>
+                    <pre className="bg-muted p-4 rounded text-sm overflow-auto max-h-96">
+                      {JSON.stringify(electionData, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Elections Overview */}
         <div>
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-white flex items-center">
-              <svg
-                className="h-6 w-6 mr-3"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
+            <h2 className="text-2xl font-bold flex items-center">
+              <BarChart3 className="h-6 w-6 mr-3" />
               Elections Overview
-            </h2>
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="inline-flex items-center px-6 py-3 border border-white/20 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-green-500 to-blue-600 hover:from-green-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-green-400 transition-all duration-200 backdrop-blur-sm shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              <svg
-                className="h-5 w-5 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={loadDashboardData}
+                className="ml-4"
+                disabled={loading}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                />
-              </svg>
-              Add Election
-            </button>
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                <span className="ml-2">Refresh</span>
+              </Button>
+            </h2>
+            <Dialog open={showCreateForm} onOpenChange={setShowCreateForm}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Election
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-700 shadow-2xl">
+                <DialogHeader className="border-b border-slate-200 dark:border-slate-700 pb-4 bg-slate-50 dark:bg-slate-800 -m-6 mb-6 p-6 rounded-t-lg">
+                  <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white">
+                    Create New Election
+                  </DialogTitle>
+                  <DialogDescription className="text-slate-600 dark:text-slate-400 mt-2">
+                    Set up a new election with candidates and voting parameters
+                  </DialogDescription>
+                </DialogHeader>
+
+                <form
+                  onSubmit={handleCreateElection}
+                  className="space-y-8 bg-white dark:bg-slate-900"
+                >
+                  {/* Election Basic Info Section */}
+                  <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-600 pb-2">
+                      Basic Information
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="title"
+                          className="text-slate-700 dark:text-slate-300 font-medium"
+                        >
+                          Election Title
+                        </Label>
+                        <Input
+                          id="title"
+                          name="title"
+                          required
+                          value={formData.title}
+                          onChange={handleInputChange}
+                          placeholder="e.g., 2025 Lok Sabha General Election"
+                          className="bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="category"
+                          className="text-slate-700 dark:text-slate-300 font-medium"
+                        >
+                          Category
+                        </Label>
+                        <select
+                          id="category"
+                          name="category"
+                          required
+                          value={formData.category}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">Select Category</option>
+                          <option value="National">National</option>
+                          <option value="State">State</option>
+                          <option value="Local">Local</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2 mt-6">
+                      <Label
+                        htmlFor="description"
+                        className="text-slate-700 dark:text-slate-300 font-medium"
+                      >
+                        Description
+                      </Label>
+                      <textarea
+                        id="description"
+                        name="description"
+                        required
+                        value={formData.description}
+                        onChange={handleInputChange}
+                        rows={3}
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="e.g., Choose your Member of Parliament for the 18th Lok Sabha"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Location & Voting Details Section */}
+                  <div className="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4 border-b border-slate-200 dark:border-slate-600 pb-2">
+                      Location & Voting Details
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="constituency"
+                          className="text-slate-700 dark:text-slate-300 font-medium"
+                        >
+                          Constituency
+                        </Label>
+                        <Input
+                          id="constituency"
+                          name="constituency"
+                          required
+                          value={formData.constituency}
+                          onChange={handleInputChange}
+                          placeholder="e.g., Mumbai South"
+                          className="bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="state"
+                          className="text-slate-700 dark:text-slate-300 font-medium"
+                        >
+                          State
+                        </Label>
+                        <Input
+                          id="state"
+                          name="state"
+                          required
+                          value={formData.state}
+                          onChange={handleInputChange}
+                          placeholder="e.g., Maharashtra"
+                          className="bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="totalVoters"
+                          className="text-slate-700 dark:text-slate-300 font-medium"
+                        >
+                          Total Voters
+                        </Label>
+                        <Input
+                          id="totalVoters"
+                          name="totalVoters"
+                          type="number"
+                          required
+                          value={formData.totalVoters}
+                          onChange={handleInputChange}
+                          placeholder="e.g., 1450000"
+                          className="bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="endDate"
+                          className="text-slate-700 dark:text-slate-300 font-medium"
+                        >
+                          End Date
+                        </Label>
+                        <Input
+                          id="endDate"
+                          name="endDate"
+                          type="date"
+                          required
+                          value={formData.endDate}
+                          onChange={handleInputChange}
+                          className="bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="status"
+                          className="text-slate-700 dark:text-slate-300 font-medium"
+                        >
+                          Status
+                        </Label>
+                        <select
+                          id="status"
+                          name="status"
+                          value={formData.status}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="active">Active</option>
+                          <option value="completed">Completed</option>
+                          <option value="scheduled">Scheduled</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Candidates Section */}
+                  <div className="bg-slate-50 dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold text-slate-900 dark:text-white border-b border-slate-200 dark:border-slate-600 pb-2">
+                        Candidates
+                      </h3>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={addCandidate}
+                        className="bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Candidate
+                      </Button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {formData.candidates.map((candidate, index) => (
+                        <Card
+                          key={index}
+                          className="p-4 bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600"
+                        >
+                          <div className="flex justify-between items-start mb-4">
+                            <Label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                              Candidate {index + 1}
+                            </Label>
+                            {formData.candidates.length > 2 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeCandidate(index)}
+                                className="text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor={`candidate-name-${index}`}
+                                className="text-slate-700 dark:text-slate-300 font-medium"
+                              >
+                                Name
+                              </Label>
+                              <Input
+                                id={`candidate-name-${index}`}
+                                value={candidate.name}
+                                onChange={(e) =>
+                                  handleCandidateChange(
+                                    index,
+                                    "name",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="e.g., Arvind Kumar Sharma"
+                                className="bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label
+                                htmlFor={`candidate-party-${index}`}
+                                className="text-slate-700 dark:text-slate-300 font-medium"
+                              >
+                                Party
+                              </Label>
+                              <Input
+                                id={`candidate-party-${index}`}
+                                value={candidate.party}
+                                onChange={(e) =>
+                                  handleCandidateChange(
+                                    index,
+                                    "party",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="e.g., Bharatiya Janata Party (BJP)"
+                                className="bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="mt-4 space-y-2">
+                            <Label
+                              htmlFor={`candidate-description-${index}`}
+                              className="text-slate-700 dark:text-slate-300 font-medium"
+                            >
+                              Description
+                            </Label>
+                            <textarea
+                              id={`candidate-description-${index}`}
+                              value={candidate.description}
+                              onChange={(e) =>
+                                handleCandidateChange(
+                                  index,
+                                  "description",
+                                  e.target.value
+                                )
+                              }
+                              rows={2}
+                              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="e.g., Former Mumbai Mayor with 12 years of public service experience"
+                            />
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+
+                  <DialogFooter className="border-t border-slate-200 dark:border-slate-700 pt-4 bg-slate-50 dark:bg-slate-800 -m-6 mt-8 p-6 rounded-b-lg">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowCreateForm(false)}
+                      className="bg-white dark:bg-slate-700 text-slate-900 dark:text-white border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-600 dark:hover:bg-blue-700"
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <Vote className="h-4 w-4 mr-2" />
+                          Create Election
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {electionData.elections.map((election) => (
-              <ElectionCard key={election.id} election={election} />
-            ))}
+            {electionData.elections.length > 0 ? (
+              electionData.elections.map((election, index) => (
+                <ElectionCard
+                  key={`election-${election.id}-${index}`}
+                  election={election}
+                  onRefresh={loadDashboardData}
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12">
+                <Vote className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+                  No Elections Found
+                </h3>
+                <p className="text-muted-foreground mb-4">
+                  {loading
+                    ? "Loading elections from Firebase..."
+                    : "Create your first election to get started."}
+                </p>
+                {!loading && (
+                  <Button onClick={() => setShowCreateForm(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Election
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Create Election Modal */}
-        {showCreateForm && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/20 p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-white">
-                  Create New Election
-                </h3>
-                <button
-                  onClick={() => setShowCreateForm(false)}
-                  className="text-white/70 hover:text-white transition-colors"
-                >
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateElection} className="space-y-6">
-                {/* Election Basic Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-blue-100 mb-2">
-                      Election Title
-                    </label>
-                    <input
-                      type="text"
-                      name="title"
-                      required
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                      placeholder="e.g., 2025 Lok Sabha General Election"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-blue-100 mb-2">
-                      Category
-                    </label>
-                    <select
-                      name="category"
-                      required
-                      value={formData.category}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                    >
-                      <option value="">Select Category</option>
-                      <option value="National">National</option>
-                      <option value="State">State</option>
-                      <option value="Local">Local</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-blue-100 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    required
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                    placeholder="e.g., Choose your Member of Parliament for the 18th Lok Sabha"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-blue-100 mb-2">
-                      Constituency
-                    </label>
-                    <input
-                      type="text"
-                      name="constituency"
-                      required
-                      value={formData.constituency}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                      placeholder="e.g., Mumbai South"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-blue-100 mb-2">
-                      State
-                    </label>
-                    <input
-                      type="text"
-                      name="state"
-                      required
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                      placeholder="e.g., Maharashtra"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-blue-100 mb-2">
-                      Total Voters
-                    </label>
-                    <input
-                      type="number"
-                      name="totalVoters"
-                      required
-                      value={formData.totalVoters}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white placeholder-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                      placeholder="e.g., 1450000"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-blue-100 mb-2">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      name="endDate"
-                      required
-                      value={formData.endDate}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-blue-100 mb-2">
-                      Status
-                    </label>
-                    <select
-                      name="status"
-                      value={formData.status}
-                      onChange={handleInputChange}
-                      className="w-full px-4 py-3 border border-white/20 rounded-xl bg-white/10 backdrop-blur-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-transparent"
-                    >
-                      <option value="active">Active</option>
-                      <option value="completed">Completed</option>
-                      <option value="scheduled">Scheduled</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Candidates Section */}
-                <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h4 className="text-lg font-semibold text-white">
-                      Candidates
-                    </h4>
-                    <button
-                      type="button"
-                      onClick={addCandidate}
-                      className="inline-flex items-center px-4 py-2 border border-white/20 rounded-lg text-sm font-medium text-white bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
-                    >
-                      <svg
-                        className="h-4 w-4 mr-2"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                        />
-                      </svg>
-                      Add Candidate
-                    </button>
-                  </div>
-
-                  <div className="space-y-4">
-                    {formData.candidates.map((candidate, index) => (
-                      <div
-                        key={index}
-                        className="bg-white/5 backdrop-blur-sm rounded-xl p-4 border border-white/10"
-                      >
-                        <div className="flex justify-between items-start mb-4">
-                          <h5 className="text-md font-medium text-blue-200">
-                            Candidate {index + 1}
-                          </h5>
-                          {formData.candidates.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() => removeCandidate(index)}
-                              className="text-red-400 hover:text-red-300 transition-colors"
-                            >
-                              <svg
-                                className="h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M6 18L18 6M6 6l12 12"
-                                />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs font-medium text-blue-200 mb-1">
-                              Name
-                            </label>
-                            <input
-                              type="text"
-                              value={candidate.name}
-                              onChange={(e) =>
-                                handleCandidateChange(
-                                  index,
-                                  "name",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm"
-                              placeholder="e.g., Arvind Kumar Sharma"
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-xs font-medium text-blue-200 mb-1">
-                              Party
-                            </label>
-                            <input
-                              type="text"
-                              value={candidate.party}
-                              onChange={(e) =>
-                                handleCandidateChange(
-                                  index,
-                                  "party",
-                                  e.target.value
-                                )
-                              }
-                              className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm"
-                              placeholder="e.g., Bharatiya Janata Party (BJP)"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-4">
-                          <label className="block text-xs font-medium text-blue-200 mb-1">
-                            Description
-                          </label>
-                          <textarea
-                            value={candidate.description}
-                            onChange={(e) =>
-                              handleCandidateChange(
-                                index,
-                                "description",
-                                e.target.value
-                              )
-                            }
-                            rows={2}
-                            className="w-full px-3 py-2 border border-white/20 rounded-lg bg-white/10 backdrop-blur-sm text-white placeholder-blue-300 focus:outline-none focus:ring-1 focus:ring-blue-400 text-sm"
-                            placeholder="e.g., Former Mumbai Mayor with 12 years of public service experience"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Form Actions */}
-                <div className="flex justify-end space-x-4 pt-6 border-t border-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateForm(false)}
-                    className="px-6 py-3 border border-white/20 rounded-xl text-sm font-medium text-white bg-white/10 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-3 border border-transparent rounded-xl text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
-                  >
-                    Create Election
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
