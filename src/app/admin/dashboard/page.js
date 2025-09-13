@@ -479,7 +479,7 @@ export default function AdminDashboard() {
                       }`}
                     ></div>
                     <span className="text-xs text-muted-foreground">
-                      Firebase{" "}
+                      {" "}
                       {firebaseConnected ? "Connected" : "Disconnected"}
                     </span>
                   </div>
@@ -601,7 +601,7 @@ export default function AdminDashboard() {
                   Election Statistics
                 </CardTitle>
                 <CardDescription>
-                  Live data from Firebase Firestore
+                  Live data
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -678,7 +678,7 @@ export default function AdminDashboard() {
                   <div className="border-t pt-3 mt-3">
                     <div className="flex justify-between items-center">
                       <span className="text-sm font-medium">
-                        Firebase Status
+                         Status
                       </span>
                       <Badge
                         variant={firebaseConnected ? "default" : "destructive"}
